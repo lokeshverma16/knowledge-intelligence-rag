@@ -1,34 +1,36 @@
-version: '3.8'
-
 services:
   api:
     build: .
     container_name: rag_platform_api
     ports:
       - "5000:5000"
-    volumes:
-      - .:/app
-      - chromadb_data:/app/data/chromadb
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
-      - CHROMA_DB_DIR=/app/data/chromadb
-      - ENVIRONMENT=development
     env_file:
       - .env
+    environment:
+      # Point the API at the chromadb service inside the compose network.
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      ENVIRONMENT: development
     depends_on:
-      - chromadb
-    command: python run.py # Use flask dev server to leverage hot reloading
+      chromadb:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: python run.py  # dev server -> hot reload
 
   chromadb:
-    image: chromadb/chroma:0.5.0
+    image: chromadb/chroma:1.5.8
     container_name: chroma_backend
     ports:
       - "8000:8000"
     volumes:
-      - chromadb_data:/chroma/chroma  # Persist vector dbs
+      - chromadb_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   chromadb_data:

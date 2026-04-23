@@ -30,3 +30,12 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Tests
+.pytest_cache/
+.coverage
+
+# Logs
+*.log
+logs/
+instance/
